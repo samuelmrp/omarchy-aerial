@@ -282,7 +282,7 @@ PanelWindow {
           ClippingRectangle {
             id: tile
             anchors.fill: parent
-            radius: 8
+            radius: Style.cornerRadius
             color: "#0B0B0E"
 
             // Each desktop is a small picture of the desktop: the same
@@ -314,7 +314,7 @@ PanelWindow {
                 y: mini.modelData.y * tile.height
                 width: Math.max(3, mini.modelData.w * tile.width)
                 height: Math.max(3, mini.modelData.h * tile.height)
-                radius: 3
+                radius: Style.cornerRadius
                 // Dark enough to read as a window against any wallpaper, rather
                 // than a grey square that could be anything.
                 color: mini.modelData.active ? Qt.rgba(0.10, 0.10, 0.13, 0.94)
@@ -420,10 +420,10 @@ PanelWindow {
         readonly property bool here: overlay.everything || surface.searching
                                      || card.modelData.workspace === surface.shownWorkspace
         readonly property bool shown: card.here && overlay.matches(card.modelData)
-        readonly property bool hovered: hover.hovered && overlay.active
-        // While the keyboard is up on the strip, no window is selected.
-        readonly property bool picked: card.hovered
-                                       || (!overlay.stripFocused && overlay.selectedKey === card.modelData.key)
+        // One ring, wherever the selection is: the pointer moves it by hovering,
+        // the keyboard by the arrows. While the keyboard is up on the strip, no
+        // window is selected.
+        readonly property bool picked: !overlay.stripFocused && overlay.selectedKey === card.modelData.key
         readonly property bool dragging: dragger.active
         readonly property bool landing: overlay.dropOnKey === card.modelData.key
         // Resolved once per card rather than per frame: a desktop-entry search
@@ -449,13 +449,13 @@ PanelWindow {
         // shrinks further over somewhere it would land, so it stops covering
         // what it is about to drop into.
         scale: card.dragging ? (overlay.dragTarget > 0 || overlay.dropOnKey !== "" ? 0.4 : 0.82)
-             : (card.picked ? 1.035 : 1)
+             : 1
         opacity: card.shown ? (card.dragging ? 0.94 : 1) : 0
         visible: card.opacity > 0.01
         Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
         Behavior on opacity { NumberAnimation { duration: 150 } }
 
-        readonly property real radius: 14 * overlay.veil
+        readonly property real radius: Style.cornerRadius
 
         ClippingRectangle {
           id: frame
@@ -495,7 +495,7 @@ PanelWindow {
           }
         }
 
-        // Hairline at rest, accent ring under the pointer, bright ring for a
+        // Hairline at rest, accent ring on the selection, bright ring for a
         // window something is about to be dropped onto.
         Rectangle {
           anchors.fill: parent
@@ -548,39 +548,6 @@ PanelWindow {
           }
         }
 
-        // Close it from here, rather than going there to close it.
-        Rectangle {
-          anchors.right: parent.right
-          anchors.top: parent.top
-          anchors.margins: 8
-          width: 26
-          height: 26
-          radius: 13
-          color: shut.hovered ? "#D2604F" : Qt.rgba(0, 0, 0, 0.62)
-          border.width: 1
-          border.color: Qt.rgba(1, 1, 1, 0.22)
-          visible: overlay.active && card.picked && !card.dragging
-          opacity: visible ? 1 : 0
-          Behavior on opacity { NumberAnimation { duration: 110 } }
-
-          Text {
-            // Window titles are somebody else's string: a browser tab can put
-            // anything in one. Rendered literally, never interpreted as markup.
-            textFormat: Text.PlainText
-            anchors.centerIn: parent
-            text: "×"
-            color: "#F4F1E9"
-            font.family: Style.font.family
-            font.pixelSize: Math.round(Style.font.body * 1.1)
-          }
-
-          HoverHandler { id: shut }
-
-          TapHandler {
-            onTapped: overlay.closeWindow(card.modelData.key)
-          }
-        }
-
         // The name of the window, under it, the way a caption sits under a
         // photograph — with the app's own icon, because at thumbnail size the
         // icon is what you recognise before you have read anything.
@@ -590,7 +557,7 @@ PanelWindow {
           anchors.topMargin: 10
           width: Math.min(caption.implicitWidth + 20, parent.width)
           height: caption.implicitHeight + 10
-          radius: height / 2
+          radius: Style.cornerRadius
           color: card.picked ? Qt.rgba(0, 0, 0, 0.78) : Qt.rgba(0, 0, 0, 0.5)
           opacity: overlay.active ? 1 : 0
           Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -616,7 +583,7 @@ PanelWindow {
                        && card.modelData.workspace !== surface.shownWorkspace
               implicitWidth: elsewhere.implicitWidth + 12
               implicitHeight: elsewhere.implicitHeight + 4
-              radius: 4
+              radius: Style.cornerRadius
               color: Qt.rgba(1, 1, 1, 0.14)
 
               Text {
@@ -656,7 +623,7 @@ PanelWindow {
       visible: surface.leading && overlay.filter !== ""
       width: query.implicitWidth + 34
       height: query.implicitHeight + 20
-      radius: height / 2
+      radius: Style.cornerRadius
       color: Qt.rgba(0, 0, 0, 0.72)
       border.width: 1
       border.color: Qt.rgba(1, 1, 1, 0.16)

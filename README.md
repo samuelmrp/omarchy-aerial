@@ -65,7 +65,7 @@ Drop a window on an empty one and it is created for you.
 | Click a workspace | Go to it |
 | Drag a window onto a workspace | Send it there, and stay open |
 | Drag a window onto another window | Trade their places in the layout |
-| Middle-click, or the ✕ | Close that window |
+| Middle-click | Close that window |
 | `Esc` | Clear what you typed, then close |
 
 Every monitor gets its own overview, spreading its own workspace. The strip
