@@ -204,6 +204,7 @@ Scope {
     root.peek = -1
     root.peekWanted = -1
     root.stripIndex = -1
+    root.releasing = false
   }
 
   Connections {
@@ -312,10 +313,15 @@ Scope {
   // or whatever is under the pointer -- and undoes the choice.
   property string pendingFocus: ""
 
+  // Set while the overview, still covering the screen, hands the keyboard back
+  // so the focus can land before anything underneath is revealed.
+  property bool releasing: false
+
   function focusWindow(address) {
     if (!address) return
     root.pendingFocus = address
-    root.dismiss()
+    root.releasing = true
+    focusThenClose.restart()
   }
 
   function applyPendingFocus() {
@@ -323,15 +329,16 @@ Scope {
     Hyprland.dispatch('hl.dsp.focus({ window = "address:0x' + root.pendingFocus + '" })')
   }
 
-  // Once as soon as the grab is released, so the switch is not held up by the
-  // closing animation, and once more when the surfaces are gone, since that
-  // can trigger another refocus of its own.
-  onActiveChanged: if (!root.active) focusSoon.restart()
-
+  // Focus first -- switching to the window's desktop under the cover of the
+  // overview -- and only then close, so what the closing reveals is already
+  // where you are going rather than where you came from.
   Timer {
-    id: focusSoon
-    interval: 30
-    onTriggered: root.applyPendingFocus()
+    id: focusThenClose
+    interval: 40
+    onTriggered: {
+      root.applyPendingFocus()
+      root.dismiss()
+    }
   }
 
   function goToWorkspace(id) {

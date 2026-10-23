@@ -31,7 +31,7 @@ PanelWindow {
   // claiming it exclusively is a fight nobody wins. And only once the overview
   // is actually open — a swipe still in progress must not take keys from the
   // window underneath.
-  WlrLayershell.keyboardFocus: surface.leading && overlay.active
+  WlrLayershell.keyboardFocus: surface.leading && overlay.active && !overlay.releasing
                                ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   // A swipe in progress should not swallow clicks meant for the desktop.
