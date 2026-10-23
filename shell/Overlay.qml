@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import "../app/Layout.js" as Layout
 
@@ -108,6 +109,10 @@ Scope {
         y: rect.y - mon.y,
         w: rect.w,
         h: rect.h,
+        // The monitor's own size, so a window scrolled out of view can be told
+        // from one that is on screen.
+        screenW: mon.scale > 0 ? mon.width / mon.scale : 0,
+        screenH: mon.scale > 0 ? mon.height / mon.scale : 0,
       })
     }
     return out
@@ -205,11 +210,15 @@ Scope {
     root.peekWanted = -1
     root.stripIndex = -1
     root.releasing = false
+    closeAfterMove.stop()
   }
 
   Connections {
     target: root.service
-    function onArming() { root.sync() }
+    function onArming() {
+      root.sync()
+      if (!readAnimations.running) readAnimations.running = true
+    }
   }
 
   onOpenedChanged: {
@@ -337,7 +346,45 @@ Scope {
     interval: 40
     onTriggered: {
       root.applyPendingFocus()
-      root.dismiss()
+      // A window out of view -- off the side of a scrolling layout -- slides
+      // in when it is focused. Closing over that slide shows the desktop and
+      // then the window arriving, so stay up until it has landed.
+      if (root.offScreen(root.pendingFocus)) closeAfterMove.restart()
+      else root.dismiss()
+    }
+  }
+
+  Timer {
+    id: closeAfterMove
+    interval: root.moveDuration
+    onTriggered: root.dismiss()
+  }
+
+  function offScreen(address) {
+    const win = root.shot.find(w => w.key === address)
+    if (!win || win.screenW <= 0 || win.screenH <= 0) return false
+    return win.x < 0 || win.y < 0 || win.x + win.w > win.screenW || win.y + win.h > win.screenH
+  }
+
+  // How long Hyprland takes to move a window: its windowsMove animation, which
+  // falls back to windows and then to global. Speed is in tenths of a second.
+  property int moveDuration: 400
+
+  Process {
+    id: readAnimations
+    command: ["/usr/bin/hyprctl", "-j", "animations"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          let list = JSON.parse(text)
+          if (Array.isArray(list) && Array.isArray(list[0])) list = list[0]
+          const byName = name => list.find(a => a && a.name === name)
+          const node = ["windowsMove", "windows", "global"].map(byName).find(a => a && a.overridden)
+                       || byName("global")
+          if (!node) return
+          root.moveDuration = node.enabled ? Math.round(node.speed * 100) + 30 : 0
+        } catch (e) {}
+      }
     }
   }
 
