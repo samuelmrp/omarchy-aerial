@@ -178,6 +178,8 @@ Scope {
   property var plans: ({})
 
   function sync() {
+    // Reopened before it finished closing: that choice is no longer wanted.
+    if (!root.active) root.pendingFocus = ""
     root.shot = root.liveShot
     root.workspaces = root.liveWorkspaces
     root.plans = root.livePlans
@@ -209,7 +211,12 @@ Scope {
     function onArming() { root.sync() }
   }
 
-  onOpenedChanged: if (!root.opened) root.forget()
+  onOpenedChanged: {
+    if (root.opened) return
+    root.applyPendingFocus()
+    root.pendingFocus = ""
+    root.forget()
+  }
 
   // A window that has just been sent elsewhere or closed should leave the
   // spread, but only once the compositor has confirmed it.
@@ -299,10 +306,32 @@ Scope {
 
   function dismiss() { if (root.service) root.service.hide() }
 
+  // The window to focus once the overview has let go of the keyboard. Focusing
+  // it while the overview still holds keyboard focus does not stick: releasing
+  // that grab makes Hyprland refocus on its own -- the window you came from,
+  // or whatever is under the pointer -- and undoes the choice.
+  property string pendingFocus: ""
+
   function focusWindow(address) {
     if (!address) return
-    Hyprland.dispatch('hl.dsp.focus({ window = "address:0x' + address + '" })')
+    root.pendingFocus = address
     root.dismiss()
+  }
+
+  function applyPendingFocus() {
+    if (!root.pendingFocus) return
+    Hyprland.dispatch('hl.dsp.focus({ window = "address:0x' + root.pendingFocus + '" })')
+  }
+
+  // Once as soon as the grab is released, so the switch is not held up by the
+  // closing animation, and once more when the surfaces are gone, since that
+  // can trigger another refocus of its own.
+  onActiveChanged: if (!root.active) focusSoon.restart()
+
+  Timer {
+    id: focusSoon
+    interval: 30
+    onTriggered: root.applyPendingFocus()
   }
 
   function goToWorkspace(id) {
