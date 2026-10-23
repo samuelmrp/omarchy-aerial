@@ -426,18 +426,21 @@ PanelWindow {
         readonly property bool picked: !overlay.stripFocused && overlay.selectedKey === card.modelData.key
         readonly property bool dragging: dragger.active
         readonly property bool landing: overlay.dropOnKey === card.modelData.key
+        // Where the window is: where the focus left it once you have chosen one,
+        // otherwise where it was when the overview opened.
+        readonly property var home: overlay.landing[card.modelData.key] || card.modelData
         // Resolved once per card rather than per frame: a desktop-entry search
         // is a directory walk.
         readonly property string icon: overlay.iconFor(card.modelData.appId)
 
         // The whole animation: where it is, blended with where it goes — plus
         // however far it has been dragged since it was picked up.
-        x: (card.slot ? card.modelData.x + (card.slot.x - card.modelData.x) * overlay.t : card.modelData.x)
+        x: (card.slot ? card.home.x + (card.slot.x - card.home.x) * overlay.t : card.home.x)
            + (card.dragging ? dragger.activeTranslation.x : 0)
-        y: (card.slot ? card.modelData.y + (card.slot.y - card.modelData.y) * overlay.t : card.modelData.y)
+        y: (card.slot ? card.home.y + (card.slot.y - card.home.y) * overlay.t : card.home.y)
            + (card.dragging ? dragger.activeTranslation.y : 0)
-        width: card.slot ? card.modelData.w + (card.slot.w - card.modelData.w) * overlay.t : card.modelData.w
-        height: card.slot ? card.modelData.h + (card.slot.h - card.modelData.h) * overlay.t : card.modelData.h
+        width: card.slot ? card.home.w + (card.slot.w - card.home.w) * overlay.t : card.home.w
+        height: card.slot ? card.home.h + (card.slot.h - card.home.h) * overlay.t : card.home.h
 
         Behavior on x { enabled: overlay.active && !card.dragging; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         Behavior on y { enabled: overlay.active && !card.dragging; NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }

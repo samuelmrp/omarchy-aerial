@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import "../app/Layout.js" as Layout
 
@@ -205,6 +206,7 @@ Scope {
     root.peekWanted = -1
     root.stripIndex = -1
     root.releasing = false
+    root.landing = ({})
   }
 
   Connections {
@@ -337,8 +339,48 @@ Scope {
     interval: 40
     onTriggered: {
       root.applyPendingFocus()
-      root.dismiss()
+      readLanding.running = true
+      landingTimeout.restart()
     }
+  }
+
+  // Where each window really is once the focus has landed. Closing flies every
+  // card back to its window, and the snapshot only knows where the windows
+  // were when the overview opened -- in a scrolling layout focusing a window
+  // slides the row, so the cards used to settle on the old view and the real
+  // windows then jumped to the new one. Keyed like the snapshot, in each
+  // window's own monitor's coordinates; empty means use the snapshot.
+  property var landing: ({})
+
+  Process {
+    id: readLanding
+    command: ["/usr/bin/hyprctl", "-j", "clients"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          const monitors = Hyprland.monitors.values || []
+          const out = ({})
+          for (const c of JSON.parse(text)) {
+            const key = String(c.address || "").replace(/^0x/, "")
+            const win = root.shot.find(w => w.key === key)
+            if (!win || !c.at || !c.size) continue
+            const mon = monitors.find(m => m.name === win.monitor)
+            if (!mon) continue
+            out[key] = { x: c.at[0] - mon.x, y: c.at[1] - mon.y, w: c.size[0], h: c.size[1] }
+          }
+          root.landing = out
+        } catch (e) {}
+        landingTimeout.stop()
+        root.dismiss()
+      }
+    }
+  }
+
+  // Never stay up waiting on an answer that is not coming.
+  Timer {
+    id: landingTimeout
+    interval: 250
+    onTriggered: root.dismiss()
   }
 
   function goToWorkspace(id) {
