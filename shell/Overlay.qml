@@ -201,6 +201,7 @@ Scope {
     root.filter = ""
     root.peek = -1
     root.peekWanted = -1
+    root.stripIndex = -1
   }
 
   Connections {
@@ -229,6 +230,12 @@ Scope {
   property string filter: ""
   property int peek: -1
   property int peekWanted: -1
+
+  // Which workspace tile the keyboard is on, or -1 while it is on the windows.
+  // Up off the top row of windows lands here; down goes back to the windows of
+  // whichever desktop the tile is showing.
+  property int stripIndex: -1
+  readonly property bool stripFocused: root.stripIndex >= 0
 
   // The surface you are working on, which is the one that answers questions
   // about where things are.
@@ -345,6 +352,50 @@ Scope {
     }
     const next = Layout.nextIn(placed, root.selectedKey, dx, dy)
     if (next) root.selectedKey = next
+    return next !== null
+  }
+
+  /** The keyboard's peek: immediate, since a key press is never a pass-by. */
+  function peekAt(id) {
+    peeking.stop()
+    const here = Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : -1
+    root.peekWanted = id === here ? -1 : id
+    root.peek = root.peekWanted
+  }
+
+  /** Up off the top of the spread: onto the tile of the desktop being shown. */
+  function enterStrip() {
+    const surface = root.leadSurface
+    if (!surface || root.workspaces.length === 0) return
+    const index = root.workspaces.findIndex(w => w.id === surface.shownWorkspace)
+    root.stripIndex = Math.max(0, index)
+    root.peekAt(root.workspaces[root.stripIndex].id)
+  }
+
+  function moveStrip(dx) {
+    const count = root.workspaces.length
+    if (count === 0) return
+    root.stripIndex = Math.max(0, Math.min(count - 1, root.stripIndex + dx))
+    root.peekAt(root.workspaces[root.stripIndex].id)
+  }
+
+  /** Down off the strip: onto the top-row window nearest the tile you left. */
+  function leaveStrip() {
+    const surface = root.leadSurface
+    if (!surface) return
+    const placed = []
+    for (const win of surface.shownWindows) {
+      const slot = surface.slots[win.key]
+      if (slot) placed.push({ key: win.key, x: slot.x, y: slot.y, w: slot.w, h: slot.h })
+    }
+    if (placed.length === 0) return       // an empty desktop: nothing to go down to
+
+    const top = Math.min(...placed.map(s => s.y))
+    const row = placed.filter(s => s.y < top + s.h / 2)
+    const from = surface.tileX(root.stripIndex) + surface.tileWidth / 2
+    row.sort((a, b) => Math.abs(a.x + a.w / 2 - from) - Math.abs(b.x + b.w / 2 - from))
+    root.selectedKey = row[0].key
+    root.stripIndex = -1
   }
 
   /** What enter acts on: the selection, as long as the filter leaves it
@@ -368,6 +419,7 @@ Scope {
   // Typing moves the selection with it, so what enter will do is also what you
   // can see highlighted, rather than something decided off-screen.
   onFilterChanged: {
+    root.stripIndex = -1
     const target = root.enterTarget()
     if (target) root.selectedKey = target
   }
@@ -385,21 +437,29 @@ Scope {
       root.filter = root.filter.slice(0, -1)
       break
     case Qt.Key_Left:
-      root.moveSelection(-1, 0)
+      if (root.stripFocused) root.moveStrip(-1)
+      else root.moveSelection(-1, 0)
       break
     case Qt.Key_Right:
-      root.moveSelection(1, 0)
+      if (root.stripFocused) root.moveStrip(1)
+      else root.moveSelection(1, 0)
       break
     case Qt.Key_Up:
-      root.moveSelection(0, -1)
+      if (!root.stripFocused && !root.moveSelection(0, -1)) root.enterStrip()
       break
     case Qt.Key_Down:
-      root.moveSelection(0, 1)
+      if (root.stripFocused) root.leaveStrip()
+      else root.moveSelection(0, 1)
       break
     case Qt.Key_Return:
     case Qt.Key_Enter:
+      if (root.stripFocused) {
+        root.goToWorkspace(root.workspaces[root.stripIndex].id)
+        break
+      }
       // Typing until one window is left and pressing enter is the fastest way
-      // through here, so that case does not need aiming first.
+      // through here, so that case does not need aiming first. Focusing a
+      // window on another desktop takes you to that desktop too.
       root.focusWindow(root.enterTarget())
       break
     case Qt.Key_W:

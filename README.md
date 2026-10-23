@@ -57,6 +57,9 @@ Drop a window on an empty one and it is created for you.
 | Just start typing | Narrow the spread to what matches |
 | `Enter` | Go to the selected window — or the only one left |
 | Arrow keys | Move between windows |
+| `↑` from the top row | Onto the workspace strip; `←` `→` peek at each desktop |
+| `↓` from the strip | Into the windows of the desktop you are peeking at |
+| `Enter` on a workspace | Go to it |
 | Click a window | Go to it |
 | Hover a workspace | Peek at what is on it, without going there |
 | Click a workspace | Go to it |

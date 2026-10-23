@@ -268,6 +268,7 @@ PanelWindow {
           readonly property bool focused: space.modelData.focused
           readonly property bool targeted: overlay.dragTarget === space.modelData.id
           readonly property bool peeked: overlay.peek === space.modelData.id
+          readonly property bool keyed: overlay.stripIndex === space.index
           readonly property var plan: overlay.plans[space.modelData.id] || []
 
           x: surface.tileX(space.index)
@@ -275,7 +276,7 @@ PanelWindow {
           width: surface.tileWidth
           height: surface.tileHeight
 
-          scale: space.targeted ? 1.12 : (space.peeked ? 1.06 : 1)
+          scale: space.targeted ? 1.12 : (space.keyed || space.peeked ? 1.06 : 1)
           Behavior on scale { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
 
           ClippingRectangle {
@@ -352,8 +353,8 @@ PanelWindow {
             anchors.fill: parent
             radius: tile.radius
             color: "transparent"
-            border.width: space.targeted || space.focused || space.peeked ? 2 : 1
-            border.color: space.targeted ? "#F2EFE7"
+            border.width: space.keyed ? 3 : (space.targeted || space.focused || space.peeked ? 2 : 1)
+            border.color: space.targeted || space.keyed ? "#F2EFE7"
                         : space.focused ? Commons.Color.accent
                         : space.peeked ? Qt.rgba(1, 1, 1, 0.5)
                         : Qt.rgba(1, 1, 1, 0.14)
@@ -420,7 +421,9 @@ PanelWindow {
                                      || card.modelData.workspace === surface.shownWorkspace
         readonly property bool shown: card.here && overlay.matches(card.modelData)
         readonly property bool hovered: hover.hovered && overlay.active
-        readonly property bool picked: card.hovered || overlay.selectedKey === card.modelData.key
+        // While the keyboard is up on the strip, no window is selected.
+        readonly property bool picked: card.hovered
+                                       || (!overlay.stripFocused && overlay.selectedKey === card.modelData.key)
         readonly property bool dragging: dragger.active
         readonly property bool landing: overlay.dropOnKey === card.modelData.key
         // Resolved once per card rather than per frame: a desktop-entry search
@@ -507,7 +510,9 @@ PanelWindow {
           id: hover
           enabled: overlay.active && card.shown
           cursorShape: card.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
-          onHoveredChanged: if (hover.hovered) overlay.selectedKey = card.modelData.key
+          // A keyboard peek fades cards in under a pointer that never moved;
+          // that must not pull the keyboard off the strip.
+          onHoveredChanged: if (hover.hovered && !overlay.stripFocused) overlay.selectedKey = card.modelData.key
         }
 
         TapHandler {
