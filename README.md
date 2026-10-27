@@ -1,5 +1,34 @@
 # Aerial
 
+> **This is a personal fork.** The original Aerial is written and maintained by
+> [ReidenXerx](https://github.com/ReidenXerx) at
+> [ReidenXerx/omarchy-aerial](https://github.com/ReidenXerx/omarchy-aerial).
+> All credit for the plugin, its design and the work described below belongs
+> to them. If you are looking for Aerial, that is where you want to go.
+>
+> This fork carries a few changes made with the help of AI to fit how I use my
+> own desktop. Because they were written with AI, I decided not to send them
+> upstream; they live here instead, on the `keyboard-workspace-nav` branch:
+>
+> - The arrow keys reach the workspace strip, so the whole overview works
+>   from the keyboard.
+> - No close button on the thumbnails, and no magnify on the focused window;
+>   only the selected window gets the accent border.
+> - Every corner follows Hyprland's `decoration:rounding`.
+> - Choosing a window focuses it before the overview closes, and the thumbnails
+>   land where the windows are after the focus, so the `scrolling` layout no
+>   longer jumps once the overview is gone.
+>
+> To install the fork instead of the original:
+>
+> ```bash
+> omarchy plugin add https://github.com/samuelmrp/omarchy-aerial --enable
+> git -C ~/.config/omarchy/plugins/reidenxerx.aerial checkout keyboard-workspace-nav
+> omarchy-restart-shell
+> ```
+>
+> Everything below is the original README.
+
 A window overview for [Omarchy](https://omarchy.org), in the shape of macOS's
 Mission Control.
 
