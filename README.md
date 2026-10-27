@@ -8,7 +8,7 @@
 >
 > This fork carries a few changes made with the help of AI to fit how I use my
 > own desktop. Because they were written with AI, I decided not to send them
-> upstream; they live here instead, on the `keyboard-workspace-nav` branch:
+> upstream; they live here instead:
 >
 > - The arrow keys reach the workspace strip, so the whole overview works
 >   from the keyboard.
@@ -23,7 +23,6 @@
 >
 > ```bash
 > omarchy plugin add https://github.com/samuelmrp/omarchy-aerial --enable
-> git -C ~/.config/omarchy/plugins/reidenxerx.aerial checkout keyboard-workspace-nav
 > omarchy-restart-shell
 > ```
 >
